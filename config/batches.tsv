@@ -1,11 +1,11 @@
 batch	bioproject	previous_group	reported_region	reported_primers	verified_region	verified_primers	status	note
-B01	PRJNA603147	Group_A_V4	V4	515F/806R	NA	515F/806R (partial)	pending	primers preceded by ~12-15 nt spacer/barcode, beyond the 30 bp window of step 01
-B02	PRJNA603199	Group_A_V4	V4	515F/806R	NA	NA	check	possible fungal ITS (ITS4/ITS1F sequences in reads) although listed in Group_A_V4
-B03	PRJNA603207	Group_A_V4	V4	515F/806R	NA	NA	pending	
-B04	PRJNA544311	Group_A2_V4_Ontario	V4	515F/806R	V4 (expected)	NA	pending	reads start right after 515F: primers removed before submission; many chloroplast-like reads
-B05	PRJNA1092852	Group_B_V3V4	V3-V4	338F/806R	V5-V7	799F/1193R	verified	paper reports 338F/806R; reads show 799F/1193R (~99%), mixed orientation; .1 libraries are ITS and excluded
-B06	PRJNA987554	Group_B_V3V4	V3-V4	341F or 338F/806R	NA	NA	check	sampled run is fungal ITS with primers removed; bacterial runs still to identify
-B07	PRJNA601979	Group_C_V2V3	V2-V3	520F/799R	V4	520F/799R	verified	paper states V2-V3; reads start with 520F (AGCAGCCGCGGTAAT) and 799R, confirming V4
-B08	PRJNA862265	Group_D_V4V5	V4-V5	515F/907R	NA	NA	pending	
-B09	PRJNA661376	Group_E_V5V6	V5-V6	799F/1115R	NA	NA	exclude?	RNA-Seq, not amplicon (27 runs vs 93 samples in table); find the BioProject with the 16S data
-B10	PRJNA1280517	Group_F_V5V7	V5-V7	799F/1193R	V5-V7 (expected)	NA	pending	reads start right after 799F: primers removed before submission
+B01	PRJNA603147	Group_A_V4	V4	515F/806R	V4	515F/806R present (spacer 11-13 nt)	verified	424 16S, 408 ITS, 85 non-16S runs
+B02	PRJNA603199	Group_A_V4	V4	515F/806R	none	NA	exclude	fungal dataset: 504 ITS, 95 non-16S, 14 inconsistent
+B03	PRJNA603207	Group_A_V4	V4	515F/806R	V4	515F/806R present (spacer 11-13 nt)	verified	561 16S, 54 non-16S runs
+B04	PRJNA544311	Group_A2_V4_Ontario	V4	515F/806R	V4	515F/806R removed	verified	150 16S, 86 ITS, 13 non-16S runs
+B05	PRJNA1092852	Group_B_V3V4	V3-V4	338F/806R	V5-V7	799F/1193R present, mixed orientation	verified	paper reports 338F/806R; 220 16S, 215 ITS runs
+B06	PRJNA987554	Group_B_V3V4	V3-V4	341F or 338F/806R	V3-V4	338F/806R present (8) or removed (16)	verified	24 16S, 24 ITS runs; primer status differs between runs
+B07	PRJNA601979	Group_C_V2V3	V2-V3	520F/799R	V4	520F/799R present	verified	paper states V2-V3; 149 16S, 137 ITS, 13 non-16S runs
+B08	PRJNA862265	Group_D_V4V5	V4-V5	515F/907R	V4-V5	515F/907R present (spacer 3-11 nt)	verified	37 16S, 37 ITS runs
+B09	PRJNA661376	Group_E_V5V6	V5-V6	799F/1115R	none	NA	exclude	RNA-Seq; locate the BioProject with the 93 amplicon samples
+B10	PRJNA1280517	Group_F_V5V7	V5-V7	799F/1193R	V5-V7	799F/1193R removed	verified	423 16S runs

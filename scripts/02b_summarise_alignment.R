@@ -5,9 +5,9 @@
 #   Rscript scripts/02b_summarise_alignment.R [alignment.tsv] [run_list.tsv] [outdir] [step02_run_summary.tsv]
 #
 # For each run:
-#   class          16S | fungal_ITS_like | non_16S | download_failed
+#   class          16S | fungal_ITS_like | inconsistent | non_16S | 16S_not_amplicon | download_failed
 #   amplicon       E. coli span covered by the reads (start_plus .. start_minus)
-#   region         hypervariable regions fully inside that span
+#   region         hypervariable regions covered at least MIN_COVER by that span
 #   fwd / rev      primers whose position matches the read ends, with status:
 #                  "present" (reads start at the primer) or "removed" (reads start right after it)
 #   spacer_fwd/rev bases before the alignment start (spacer/barcode/heterogeneity spacer)
@@ -28,6 +28,7 @@ MIN_16S  <- 0.50  # minimum fraction of reads aligning to 16S
 ITS_POS  <- 1450  # all read ends beyond this position -> fungal 18S end (ITS amplicon)
 TOL      <- 3     # tolerance (bp) when matching read ends to primer positions
 MIX_LOW  <- 0.10  # R1 forward-strand fraction between MIX_LOW and 1 - MIX_LOW -> mixed
+MIN_COVER <- 0.80 # a hypervariable region counts if the amplicon covers at least 80% of it
 
 # Primer binding sites on E. coli 16S (J01859 numbering): first and last base covered.
 PRIMERS <- data.frame(
@@ -72,7 +73,8 @@ match_primer <- function(pos, direction) {
 
 region_of <- function(a, b) {
   if (is.na(a) || is.na(b)) return(NA_character_)
-  v <- VREGIONS$name[VREGIONS$start >= a & VREGIONS$end <= b]
+  overlap <- pmax(0, pmin(VREGIONS$end, b) - pmax(VREGIONS$start, a) + 1)
+  v <- VREGIONS$name[overlap / (VREGIONS$end - VREGIONS$start + 1) >= MIN_COVER]
   if (!length(v)) return("none")
   if (length(v) == 1) v else paste0(v[1], "-", v[length(v)])
 }
@@ -95,6 +97,7 @@ classify <- function(d) {
 
   class <- if (!length(ends)) "non_16S"
            else if (all(ends >= ITS_POS)) "fungal_ITS_like"
+           else if (any(ends >= ITS_POS)) "inconsistent"
            else if (frac < MIN_16S) "non_16S"
            else "16S"
 
@@ -153,6 +156,7 @@ bp <- do.call(rbind, lapply(split(per_run, per_run$bioproject), function(d) {
     n_runs           = nrow(d),
     bacterial_16S    = nrow(b),
     fungal_ITS_like  = sum(d$class == "fungal_ITS_like"),
+    inconsistent     = sum(d$class == "inconsistent"),
     non_16S          = sum(d$class %in% c("non_16S", "16S_not_amplicon")),
     failed           = sum(d$class == "download_failed"),
     region           = tab_string(b$region),
@@ -176,7 +180,7 @@ write.table(per_run[per_run$class == "16S", keep], file.path(outdir, "bacterial_
 
 cat("\nRuns per class:\n"); print(table(per_run$class))
 cat("\nPer BioProject:\n")
-print(bp[, c("bioproject", "n_runs", "bacterial_16S", "fungal_ITS_like", "non_16S", "failed", "n_seq_runs")],
+print(bp[, c("bioproject", "n_runs", "bacterial_16S", "fungal_ITS_like", "inconsistent", "non_16S", "failed", "n_seq_runs")],
       row.names = FALSE)
 for (i in seq_len(nrow(bp))) {
   cat("\n", bp$bioproject[i], "\n",

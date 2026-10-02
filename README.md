@@ -118,12 +118,12 @@ Outputs: `run_summary.tsv` (one row per run), `bioproject_summary.tsv` (classes,
 Rscript scripts/02b_summarise_alignment.R results/01b_alignment/alignment.tsv metadata/run_list.tsv results/02b_summary results/02_summary/run_summary.tsv
 ```
 
-Each run is classified as `16S`, `fungal_ITS_like` (all read ends beyond position 1450), `non_16S` (< 50% of reads align to 16S), `16S_not_amplicon` (library strategy is not AMPLICON, e.g. RNA-Seq) or `download_failed`. For 16S runs, the read ends are matched (±3 bp) to the primer binding sites on *E. coli* 16S:
+Each run is classified as `16S`, `fungal_ITS_like` (all read ends beyond position 1450), `inconsistent` (one read end beyond 1450 and the other within 16S; excluded), `non_16S` (< 50% of reads align to 16S), `16S_not_amplicon` (library strategy is not AMPLICON, e.g. RNA-Seq) or `download_failed`. For 16S runs, the read ends are matched (±3 bp) to the primer binding sites on *E. coli* 16S:
 
 - **present**: reads start at the primer's first base (primers must be trimmed);
 - **removed**: reads start right after the primer (nothing to trim).
 
-Primers with the same 3' end (338F/341F, 785R/806R) cannot be told apart once removed; they amplify the same region. The amplicon span gives the hypervariable regions (V1–V9, *E. coli* numbering). `bacterial_runs.tsv` from this step is the input for DADA2.
+Primers with the same 3' end (338F/341F, 785R/806R) cannot be told apart once removed; they amplify the same region. The amplicon span gives the hypervariable regions (V1–V9, *E. coli* numbering) covered at least 80%; this tolerates reads trimmed a few bases beyond the primer (e.g. PRJNA1280517, reverse reads ending at ~1170 instead of 1175). `bacterial_runs.tsv` from this step is the input for DADA2.
 
 ## Decision log
 
@@ -136,3 +136,4 @@ Primers with the same 3' end (338F/341F, 785R/806R) cannot be told apart once re
 | 2026-10-02 | PRJNA661376 flagged for exclusion | Its 27 runs are RNA-Seq, not 16S amplicons; the BioProject holding the 93 amplicon samples must be identified |
 | 2026-10-02 | PRJNA603199 and PRJNA987554 flagged for review | Reads of sampled runs contain fungal ITS sequences (ITS1F/ITS4 sites; 18S end and 5.8S start) |
 | 2026-10-02 | Final run classification based on BLAST positions (step 02b), not on primer matches alone | Within a single BioProject, runs can differ: PRJNA987554 contains runs with 338F/806R present, runs with primers removed, and fungal ITS runs |
+| 2026-10-02 | PRJNA603199 excluded | 504 of 613 runs are fungal ITS and 95 are not 16S; the 14 remaining runs are inconsistent (R1 at the 18S end, R2 at 806R). It is the fungal dataset of the study, not bacterial |
