@@ -24,9 +24,10 @@ MIN_ITS     <- 0.50  # fraction of reads starting with an ITS primer -> fungal_I
 MIN_MIX     <- 0.10  # both primers present in R1 above this -> mixed orientation
 TIE         <- 0.90  # primers within 90% of the top count are considered tied
 
-# Nested primers: when both match the same reads, the outer (first) one is the real primer.
-# 338F reads also contain the 341F site; 806R reads also contain the 785R site.
-NESTED <- list("338F" = "341F", "806R" = "785R")
+# Nested primers: when both match the same reads, the outer one is the real primer.
+# 338F reads also contain the 341F site, 515F reads the 520F site,
+# and 806R/785R reads the 785R/799R sites.
+NESTED <- list("338F" = "341F", "515F" = "520F", "806R" = c("785R", "799R"), "785R" = "799R")
 
 # Primer pair -> hypervariable region
 REGIONS <- data.frame(
@@ -49,7 +50,7 @@ pick_primer <- function(tot, suffix) {
   if (nrow(d) == 0 || max(d$count) == 0) return(list(name = NA_character_, count = 0))
   tied <- d$primer[d$count >= TIE * max(d$count)]
   for (outer in names(NESTED)) {
-    if (all(c(outer, NESTED[[outer]]) %in% tied)) tied <- setdiff(tied, NESTED[[outer]])
+    if (outer %in% tied) tied <- setdiff(tied, NESTED[[outer]])
   }
   list(name = paste(sort(tied), collapse = "|"), count = max(d$count))
 }
@@ -138,7 +139,7 @@ summarise_bp <- function(d) {
     no_primer_detected = sum(d$class == "no_primer_detected"),
     failed             = sum(d$class %in% c("download_failed", "no_reads")),
     mixed_orientation  = sum(b$orientation == "mixed", na.rm = TRUE),
-    primer_pairs       = tab_string(paste0(b$fwd, "/", b$rev, " ", b$region)),
+    primer_pairs       = if (nrow(b)) tab_string(paste0(b$fwd, "/", b$rev, " ", b$region)) else "",
     n_seq_runs         = length(unique(b$seq_run_id)),
     seq_runs           = tab_string(b$seq_run_id),
     stringsAsFactors   = FALSE

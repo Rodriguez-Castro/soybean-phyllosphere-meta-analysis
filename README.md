@@ -23,9 +23,11 @@ soybean-phyllosphere-meta-analysis/
 ├── scripts/
 │   ├── 00_build_run_list.py
 │   ├── 01_verify_runs.sh
+│   ├── 01b_align_reads.sh
 │   └── 02_summarise_verification.R
 ├── results/
 │   ├── 01_verification/
+│   ├── 01b_alignment/
 │   └── 02_summary/
 └── logs/
 ```
@@ -39,7 +41,8 @@ ssh rodl4348@hpc-bio.ccs.usherbrooke.ca
 newgrp def-ilafores
 tmux new -s verify
 salloc --time=24:00:00 --cpus-per-task=1 --mem=2G --partition bio   # prompt changes to cv3401
-module load StdEnv/2023 gcc/12.3 sra-toolkit/3.0.9                  # steps 00-01
+module load StdEnv/2023 gcc/12.3 sra-toolkit/3.0.9                  # steps 00-01b
+module load blast+                                                  # step 01b (check version with: module spider blast+)
 module load StdEnv/2023 r/4.4.0                                     # step 02
 ```
 
@@ -72,6 +75,21 @@ Output columns: `run, bioproject, instrument, seq_run, flowcell, read, n_reads, 
 
 A run with no primer detected may have had primers removed before submission; check it manually.
 
+### 01b — Locate reads on the E. coli 16S gene with BLAST
+
+Step 01 only detects primers within the first 30 bp of the reads. It misses runs whose primers were removed before submission or are preceded by long spacers. Step 01b aligns the first 200 reads of each run to the *E. coli* 16S rRNA gene (J01859, standard numbering) and reports where the alignments start:
+
+```bash
+bash scripts/01b_align_reads.sh metadata/run_list.tsv results/01b_alignment/alignment.tsv 200
+```
+
+| Column | Meaning |
+|---|---|
+| `frac_16S` | fraction of reads aligning to 16S; near 0 means ITS, RNA-Seq, shotgun, etc. |
+| `frac_plus` | fraction of aligned reads on the forward strand; ~0.5 means mixed orientation |
+| `start_plus` / `start_minus` | median *E. coli* position where forward / reverse alignments start, i.e. the amplicon ends (e.g. 515 = 515F kept, ~534 = 515F removed) |
+| `qstart_plus` / `qstart_minus` | median read position where the alignment starts; > 1 means a spacer or barcode before the primer |
+
 ### 02 — Classify runs and summarise per BioProject
 
 ```bash
@@ -97,5 +115,8 @@ Outputs: `run_summary.tsv` (one row per run), `bioproject_summary.tsv` (classes,
 | Date | Decision | Reason |
 |---|---|---|
 | 2026-10-01 | DADA2 and taxonomy run separately per BioProject (10 batches); studies merged only at genus level. Hypervariable region is kept as a descriptive variable and covariate, not as a processing group | Each BioProject is, in practice, a separate sequencing run and error models are run-specific; ASVs from different primers or truncation lengths cannot be merged (e.g., 515F/806R vs 520F/799R in V4) |
-| 2026-10-01 | PRJNA601979 relabelled from V2–V3 to V4 (pending read verification) | The paper states that the "V2–V3" region was amplified with 520F/799R. These primers bind around *E. coli* positions 520 and 799, downstream of V3 (≈433–497) and upstream of V5 (≈822–879), so the amplicon can only span V4 (≈576–682). The literature consistently describes 520F/799R as a V4 primer pair. To be confirmed in step 01 (primer match at read start) and by aligning reads to *E. coli* 16S (J01695). |
+| 2026-10-02 | PRJNA601979 relabelled from V2–V3 to V4 (verified) | The paper states that the "V2–V3" region was amplified with 520F/799R. These primers bind around *E. coli* positions 520 and 799, downstream of V3 (≈433–497) and upstream of V5 (≈822–879), so the amplicon can only span V4 (≈576–682). The literature consistently describes 520F/799R as a V4 primer pair. Confirmed: reads start with 520F (AGCAGCCGCGGTAAT) and 799R (CMGGGTATCTAATCCKGTT, reverse complement of 799F). |
 | 2026-10-01 | Primers assigned from the reads, not from the papers | PRJNA1092852: paper reports 338F/806R, but bacterial libraries (suffix `.1b`, 134 runs) contain 799F/1193R (V5–V7) in ~99% of reads, in mixed orientation (~50% each). Libraries with suffix `.1` (129 runs) are fungal ITS1F/ITS2 and are excluded. Authors contacted for confirmation. |
+| 2026-10-02 | Primer verification extended with BLAST against *E. coli* 16S (step 01b) | Step 01 left 2,174 of 3,700 runs as `no_primer_detected` and 1,076 as `16S_partial`: several BioProjects removed primers before submission (PRJNA1280517, PRJNA544311) or have spacers longer than the 30 bp window (PRJNA603147) |
+| 2026-10-02 | PRJNA661376 flagged for exclusion | Its 27 runs are RNA-Seq, not 16S amplicons; the BioProject holding the 93 amplicon samples must be identified |
+| 2026-10-02 | PRJNA603199 and PRJNA987554 flagged for review | Reads of sampled runs contain fungal ITS sequences (ITS1F/ITS4 sites; 18S end and 5.8S start) |

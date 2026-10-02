@@ -13,5 +13,5 @@ name	sequence	target	note
 ITS1F	CTTGGTCATTTAGAGGAAGTAA	ITS	fungal, used to flag non-bacterial runs
 ITS2	GCTGCGTTCTTCATCGATGC	ITS	fungal, used to flag non-bacterial runs
 ITS4	TCCTCCGCTTATTGATATGC	ITS	fungal, used to flag non-bacterial runs
-#520F	PASTE_SEQUENCE_FROM_PAPER	16S	V4 forward (PRJNA601979); remove # after filling
-#799R	PASTE_SEQUENCE_FROM_PAPER	16S	V4 reverse (PRJNA601979); remove # after filling
+520F	AGCAGCCGCGGTAAT	16S	V4 forward; observed at read start in PRJNA601979 (confirm with paper)
+799R	CMGGGTATCTAATCCKGTT	16S	V4 reverse (reverse complement of 799F); observed in PRJNA601979
