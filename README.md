@@ -19,18 +19,21 @@ soybean-phyllosphere-meta-analysis/
 │   └── primers.tsv              # primer catalogue (IUPAC) used for verification and trimming
 ├── metadata/
 │   ├── runinfo/                 # SRA RunInfo CSVs, one per BioProject (input)
-│   └── run_list.tsv             # combined run list (step 00)
+│   ├── run_list.tsv             # combined run list (step 00)
+│   └── phyllosphere_runs.csv    # runs selected for the meta-analysis (input of step 03)
 ├── scripts/
 │   ├── 00_build_run_list.py
 │   ├── 01_verify_runs.sh
 │   ├── 01b_align_reads.sh
 │   ├── 02_summarise_verification.R
-│   └── 02b_summarise_alignment.R
+│   ├── 02b_summarise_alignment.R
+│   └── 03_cross_selection.R
 ├── results/
 │   ├── 01_verification/
 │   ├── 01b_alignment/
 │   ├── 02_summary/
-│   └── 02b_summary/
+│   ├── 02b_summary/
+│   └── 03_selection/
 └── logs/
 ```
 
@@ -124,6 +127,17 @@ Each run is classified as `16S`, `fungal_ITS_like` (all read ends beyond positio
 - **removed**: reads start right after the primer (nothing to trim).
 
 Primers with the same 3' end (338F/341F, 785R/806R) cannot be told apart once removed; they amplify the same region. The amplicon span gives the hypervariable regions (V1–V9, *E. coli* numbering) covered at least 80%; this tolerates reads trimmed a few bases beyond the primer (e.g. PRJNA1280517, reverse reads ending at ~1170 instead of 1175). `bacterial_runs.tsv` from this step is the input for DADA2.
+
+### 03 — Cross the phyllosphere selection with the verified classification
+
+`metadata/phyllosphere_runs.csv` lists the runs selected for the meta-analysis (column `run`; optional `bio_project`, `dada2_group`). It is copied from the lab storage, which is only mounted on the login node:
+
+```bash
+cp /jbod2/def-ilafores/analysis/meta_analysis_soybean/data/filtered/phyllosphere_runs.csv metadata/   # on iv12
+Rscript scripts/03_cross_selection.R metadata/phyllosphere_runs.csv results/02b_summary/run_alignment_summary.tsv results/03_selection   # on cv3401
+```
+
+Outputs: `selection_check.tsv` (every selected run with its verified class), `selection_summary.tsv` (kept and lost runs per BioProject and previous group, by reason; `not_verified` = run outside the 10 verified BioProjects) and `selected_bacterial_runs.tsv` (input for DADA2).
 
 ## Decision log
 
