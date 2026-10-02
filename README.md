@@ -12,7 +12,7 @@ Reproducible pipeline to reprocess public 16S rRNA amplicon data from the phyllo
 ## Repository structure
 
 ```
-soy-phyllosphere-meta/
+soybean-phyllosphere-meta-analysis/
 ├── README.md
 ├── config/
 │   ├── batches.tsv              # one DADA2 batch per BioProject, reported vs verified primers
@@ -22,20 +22,30 @@ soy-phyllosphere-meta/
 │   └── run_list.tsv             # combined run list (step 00)
 ├── scripts/
 │   ├── 00_build_run_list.py
-│   └── 01_verify_runs.sh
+│   ├── 01_verify_runs.sh
+│   └── 02_summarise_verification.R
 ├── results/
-│   └── 01_verification/
+│   ├── 01_verification/
+│   └── 02_summary/
 └── logs/
 ```
 
 ## Requirements (hpc-bio, Compute Canada software stack)
 
+No computation is allowed on the login node (`iv12`). All steps run on the compute node `cv3401`, requested with `salloc` from inside a `tmux` session:
+
 ```bash
+ssh rodl4348@hpc-bio.ccs.usherbrooke.ca
 newgrp def-ilafores
-module load StdEnv/2023 gcc/12.3 sra-toolkit/3.0.9
+tmux new -s verify
+salloc --time=24:00:00 --cpus-per-task=1 --mem=2G --partition bio   # prompt changes to cv3401
+module load StdEnv/2023 gcc/12.3 sra-toolkit/3.0.9                  # steps 00-01
+module load StdEnv/2023 r/4.4.0                                     # step 02
 ```
 
-Python 3 (standard library only) for step 00.
+`cv3401` has internet access (needed by `fastq-dump`) and sees the home directory, but not `/jbod2`; keep the repository in `$HOME`.
+
+Python 3 (standard library only) for step 00; base R only for step 02.
 
 ## Steps
 
@@ -61,6 +71,26 @@ bash scripts/01_verify_runs.sh metadata/run_list.tsv results/01_verification/pri
 Output columns: `run, bioproject, instrument, seq_run, flowcell, read, n_reads, primer, count`.
 
 A run with no primer detected may have had primers removed before submission; check it manually.
+
+### 02 — Classify runs and summarise per BioProject
+
+```bash
+Rscript scripts/02_summarise_verification.R results/01_verification/primer_counts.tsv metadata/run_list.tsv results/02_summary
+```
+
+Each run is classified from the fraction of reads starting with each primer:
+
+| Class | Rule |
+|---|---|
+| `bacterial_16S` | ≥ 80% of reads start with the assigned 16S primer pair |
+| `16S_partial` | 20–80%; check manually |
+| `fungal_ITS` | ≥ 50% of reads start with an ITS primer; excluded |
+| `no_primer_detected` | < 20%; primers possibly removed before submission |
+| `download_failed` / `no_reads` | relaunch step 01 for these runs |
+
+Nested primers that match the same reads are resolved to the outer primer (338F over 341F, 806R over 785R). Orientation is `mixed` when both primers start ≥ 10% of R1 reads. The sequencing run is `instrument:run:flowcell` from the original read names.
+
+Outputs: `run_summary.tsv` (one row per run), `bioproject_summary.tsv` (classes, primer pairs and sequencing runs per BioProject) and `bacterial_runs.tsv` (input for DADA2).
 
 ## Decision log
 
