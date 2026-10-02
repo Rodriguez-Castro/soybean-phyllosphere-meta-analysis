@@ -1,0 +1,11 @@
+batch	bioproject	previous_group	reported_region	reported_primers	verified_region	verified_primers	status	note
+B01	PRJNA603147	Group_A_V4	V4	515F/806R	NA	NA	pending	consecutive accession with B02 and B03; check if same flow cell
+B02	PRJNA603199	Group_A_V4	V4	515F/806R	NA	NA	pending	
+B03	PRJNA603207	Group_A_V4	V4	515F/806R	NA	NA	pending	
+B04	PRJNA544311	Group_A2_V4_Ontario	V4	515F/806R	NA	NA	pending	
+B05	PRJNA1092852	Group_B_V3V4	V3-V4	338F/806R	V5-V7	799F/1193R	verified	paper reports 338F/806R; reads show 799F/1193R (~99%), mixed orientation; .1 libraries are ITS and excluded
+B06	PRJNA987554	Group_B_V3V4	V3-V4	341F or 338F/806R	NA	NA	pending	confirm which forward primer
+B07	PRJNA601979	Group_C_V2V3	V2-V3	520F/799R	V4 (expected)	NA	pending	paper states V2-V3, but 520F/799R positions only span V4
+B08	PRJNA862265	Group_D_V4V5	V4-V5	515F/907R	NA	NA	pending	
+B09	PRJNA661376	Group_E_V5V6	V5-V6	799F/1115R	NA	NA	pending	
+B10	PRJNA1280517	Group_F_V5V7	V5-V7	799F/1193R	NA	NA	pending	420 samples; check for several flow cells
