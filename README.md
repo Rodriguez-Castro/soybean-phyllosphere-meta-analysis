@@ -24,11 +24,13 @@ soybean-phyllosphere-meta-analysis/
 │   ├── 00_build_run_list.py
 │   ├── 01_verify_runs.sh
 │   ├── 01b_align_reads.sh
-│   └── 02_summarise_verification.R
+│   ├── 02_summarise_verification.R
+│   └── 02b_summarise_alignment.R
 ├── results/
 │   ├── 01_verification/
 │   ├── 01b_alignment/
-│   └── 02_summary/
+│   ├── 02_summary/
+│   └── 02b_summary/
 └── logs/
 ```
 
@@ -85,7 +87,7 @@ bash scripts/01b_align_reads.sh metadata/run_list.tsv results/01b_alignment/alig
 
 | Column | Meaning |
 |---|---|
-| `frac_16S` | fraction of reads aligning to 16S; near 0 means ITS, RNA-Seq, shotgun, etc. |
+| `frac_16S` | fraction of reads aligning to 16S. Fungal ITS reads align partially (the end of the fungal 18S gene resembles the end of 16S), always near *E. coli* positions 1491/1533 |
 | `frac_plus` | fraction of aligned reads on the forward strand; ~0.5 means mixed orientation |
 | `start_plus` / `start_minus` | median *E. coli* position where forward / reverse alignments start, i.e. the amplicon ends (e.g. 515 = 515F kept, ~534 = 515F removed) |
 | `qstart_plus` / `qstart_minus` | median read position where the alignment starts; > 1 means a spacer or barcode before the primer |
@@ -108,7 +110,20 @@ Each run is classified from the fraction of reads starting with each primer:
 
 Nested primers that match the same reads are resolved to the outer primer (338F over 341F, 806R over 785R). Orientation is `mixed` when both primers start ≥ 10% of R1 reads. The sequencing run is `instrument:run:flowcell` from the original read names.
 
-Outputs: `run_summary.tsv` (one row per run), `bioproject_summary.tsv` (classes, primer pairs and sequencing runs per BioProject) and `bacterial_runs.tsv` (input for DADA2).
+Outputs: `run_summary.tsv` (one row per run), `bioproject_summary.tsv` (classes, primer pairs and sequencing runs per BioProject) and `bacterial_runs.tsv`.
+
+### 02b — Interpret the alignment positions (final run classification)
+
+```bash
+Rscript scripts/02b_summarise_alignment.R results/01b_alignment/alignment.tsv metadata/run_list.tsv results/02b_summary results/02_summary/run_summary.tsv
+```
+
+Each run is classified as `16S`, `fungal_ITS_like` (all read ends beyond position 1450), `non_16S` (< 50% of reads align to 16S), `16S_not_amplicon` (library strategy is not AMPLICON, e.g. RNA-Seq) or `download_failed`. For 16S runs, the read ends are matched (±3 bp) to the primer binding sites on *E. coli* 16S:
+
+- **present**: reads start at the primer's first base (primers must be trimmed);
+- **removed**: reads start right after the primer (nothing to trim).
+
+Primers with the same 3' end (338F/341F, 785R/806R) cannot be told apart once removed; they amplify the same region. The amplicon span gives the hypervariable regions (V1–V9, *E. coli* numbering). `bacterial_runs.tsv` from this step is the input for DADA2.
 
 ## Decision log
 
@@ -120,3 +135,4 @@ Outputs: `run_summary.tsv` (one row per run), `bioproject_summary.tsv` (classes,
 | 2026-10-02 | Primer verification extended with BLAST against *E. coli* 16S (step 01b) | Step 01 left 2,174 of 3,700 runs as `no_primer_detected` and 1,076 as `16S_partial`: several BioProjects removed primers before submission (PRJNA1280517, PRJNA544311) or have spacers longer than the 30 bp window (PRJNA603147) |
 | 2026-10-02 | PRJNA661376 flagged for exclusion | Its 27 runs are RNA-Seq, not 16S amplicons; the BioProject holding the 93 amplicon samples must be identified |
 | 2026-10-02 | PRJNA603199 and PRJNA987554 flagged for review | Reads of sampled runs contain fungal ITS sequences (ITS1F/ITS4 sites; 18S end and 5.8S start) |
+| 2026-10-02 | Final run classification based on BLAST positions (step 02b), not on primer matches alone | Within a single BioProject, runs can differ: PRJNA987554 contains runs with 338F/806R present, runs with primers removed, and fungal ITS runs |
