@@ -16,24 +16,28 @@ soybean-phyllosphere-meta-analysis/
 ├── README.md
 ├── config/
 │   ├── batches.tsv              # one DADA2 batch per BioProject, reported vs verified primers
-│   └── primers.tsv              # primer catalogue (IUPAC) used for verification and trimming
+│   ├── primers.tsv              # primer catalogue (IUPAC) used for verification and trimming
+│   └── selection_overrides.tsv  # documented exceptions to the original selection
 ├── metadata/
 │   ├── runinfo/                 # SRA RunInfo CSVs, one per BioProject (input)
 │   ├── run_list.tsv             # combined run list (step 00)
-│   └── phyllosphere_runs.csv    # runs selected for the meta-analysis (input of step 03)
+│   ├── phyllosphere_runs.csv    # runs selected for the meta-analysis (input of step 03)
+│   └── sample_sheet.tsv         # final runs for DADA2 (step 04)
 ├── scripts/
 │   ├── 00_build_run_list.py
 │   ├── 01_verify_runs.sh
 │   ├── 01b_align_reads.sh
 │   ├── 02_summarise_verification.R
 │   ├── 02b_summarise_alignment.R
-│   └── 03_cross_selection.R
+│   ├── 03_cross_selection.R
+│   └── 04_build_sample_sheet.R
 ├── results/
 │   ├── 01_verification/
 │   ├── 01b_alignment/
 │   ├── 02_summary/
 │   ├── 02b_summary/
-│   └── 03_selection/
+│   ├── 03_selection/
+│   └── 04_sample_sheet/
 └── logs/
 ```
 
@@ -138,6 +142,14 @@ Rscript scripts/03_cross_selection.R metadata/phyllosphere_runs.csv results/02b_
 ```
 
 Outputs: `selection_check.tsv` (every selected run with its verified class), `selection_summary.tsv` (kept and lost runs per BioProject and previous group, by reason; `not_verified` = run outside the 10 verified BioProjects) and `selected_bacterial_runs.tsv` (input for DADA2).
+
+### 04 — Build the final sample sheet
+
+```bash
+Rscript scripts/04_build_sample_sheet.R
+```
+
+Includes every selected run verified as bacterial 16S whose previous group is not `excluded_*`, plus the exceptions listed in `config/selection_overrides.tsv`. For each run, `metadata/sample_sheet.tsv` gives the DADA2 batch, sequencing run (error models are learned per sequencing run), region, leaf compartment, orientation, primer names and sequences, and whether each primer is `present` (to trim) or `removed` (nothing to trim). Runs whose read ends did not match a known primer site take the majority status of their batch and are flagged in `status_flag`. `results/04_sample_sheet/batch_summary.tsv` summarises each batch.
 
 ## Decision log
 

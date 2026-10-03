@@ -1,0 +1,2 @@
+bioproject	previous_group	action	reason
+PRJNA1092852	excluded_ITS	include_16S	whole BioProject had been labelled ITS; reads show 86 selected runs are bacterial 16S (42 L, 44 LE). Only runs verified as 16S are included
