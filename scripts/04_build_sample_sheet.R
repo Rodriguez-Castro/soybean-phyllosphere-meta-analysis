@@ -41,8 +41,9 @@ x$previous_group <- group[included]
 x$included_by    <- ifelse(override[included], "override", "selection")
 
 # ---- add layout, library and sample names -----------------------------------
-x <- merge(x, runs[, intersect(c("run", "library_layout", "library_name", "sample_name"), names(runs))],
-           by = "run", all.x = TRUE)
+meta <- runs[, intersect(c("run", "library_layout", "library_name", "sample_name"), names(runs))]
+x <- x[, setdiff(names(x), setdiff(names(meta), "run"))]   # avoid duplicated columns from the selection file
+x <- merge(x, meta, by = "run", all.x = TRUE)
 
 # ---- batch-level information --------------------------------------------------
 b <- batches[match(x$bioproject, batches$bioproject), ]

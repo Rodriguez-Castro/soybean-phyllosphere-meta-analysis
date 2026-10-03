@@ -16,6 +16,7 @@ soybean-phyllosphere-meta-analysis/
 ├── README.md
 ├── config/
 │   ├── batches.tsv              # one DADA2 batch per BioProject, reported vs verified primers
+│   ├── dada2_params.tsv         # per-batch processing parameters (cutadapt options, error model, truncLen)
 │   ├── primers.tsv              # primer catalogue (IUPAC) used for verification and trimming
 │   └── selection_overrides.tsv  # documented exceptions to the original selection
 ├── metadata/
@@ -30,14 +31,17 @@ soybean-phyllosphere-meta-analysis/
 │   ├── 02_summarise_verification.R
 │   ├── 02b_summarise_alignment.R
 │   ├── 03_cross_selection.R
-│   └── 04_build_sample_sheet.R
+│   ├── 04_build_sample_sheet.R
+│   ├── 05_download_reads.sh
+│   └── 06_trim_orient.sh
 ├── results/
 │   ├── 01_verification/
 │   ├── 01b_alignment/
 │   ├── 02_summary/
 │   ├── 02b_summary/
 │   ├── 03_selection/
-│   └── 04_sample_sheet/
+│   ├── 04_sample_sheet/
+│   └── 06_trim/
 └── logs/
 ```
 
@@ -151,6 +155,32 @@ Rscript scripts/04_build_sample_sheet.R
 
 Includes every selected run verified as bacterial 16S whose previous group is not `excluded_*`, plus the exceptions listed in `config/selection_overrides.tsv`. For each run, `metadata/sample_sheet.tsv` gives the DADA2 batch, sequencing run (error models are learned per sequencing run), region, leaf compartment, orientation, primer names and sequences, and whether each primer is `present` (to trim) or `removed` (nothing to trim). Runs whose read ends did not match a known primer site take the majority status of their batch and are flagged in `status_flag`. `results/04_sample_sheet/batch_summary.tsv` summarises each batch.
 
+### 05 — Download the complete reads
+
+```bash
+bash scripts/05_download_reads.sh metadata/sample_sheet.tsv <raw_dir> 4
+```
+
+`fasterq-dump` for every run of the sample sheet, compressed to `<raw_dir>/<run>_1.fastq.gz` / `_2.fastq.gz`. Resumable (`.done` markers); failures listed in `logs/05_download_failed.tsv`.
+
+### 06 — Remove primers and orient reads
+
+```bash
+module load cutadapt   # check the version with: module spider cutadapt
+bash scripts/06_trim_orient.sh metadata/sample_sheet.tsv <raw_dir> <trimmed_dir> 4
+```
+
+After this step, in every run file `_1` starts at the forward primer site and `_2` at the reverse primer site:
+
+| Case (from the sample sheet) | Action |
+|---|---|
+| Primers present | cutadapt with `--discard-untrimmed` (non-anchored 5' primers, so spacers are removed too), then removal of reverse-complemented primers from 3' ends (read-through) |
+| Primers removed | reads copied unchanged |
+| `R1_reverse` | R1 and R2 swapped |
+| `mixed` (B05) | two cutadapt passes; pairs found in each orientation are written as sets `<run>_A` and `<run>_B`, which get separate error models in DADA2 |
+
+Extra cutadapt options per batch come from `config/dada2_params.tsv` (e.g. `--pair-filter=first` for B07, as in the predoc). `results/06_trim/trim_manifest.tsv` records reads in/out per run.
+
 ## Decision log
 
 | Date | Decision | Reason |
@@ -169,3 +199,7 @@ Includes every selected run verified as bacterial 16S whose previous group is no
 | 2026-10-02 | Phyllosphere includes leaf surface and endosphere; each study labelled `epi`, `endo` or `endo+epi` (column `leaf_compartment` in `config/batches.tsv`) | Several studies do not separate epiphytes from endophytes; the label allows covariate and sensitivity analyses |
 | 2026-10-02 | PRJNA390118 relabelled from V4–V5 to V4; its 72 selected ITS runs removed | Reads start right after 515F and end at ~781–785 (515F/806R removed); no 907R signal. Libraries are named `S-16S-*` and `S-ITS-*`; all 72 selected 16S runs are leaf (`L`) |
 | 2026-10-02 | Verified selection: 983 bacterial phyllosphere runs | 897 of the 1,219 previously selected runs in included groups are 16S, plus 86 recovered runs of PRJNA1092852 |
+| 2026-10-03 | DADA2 parameters inherited from the predoc (Chapter 1 methods) | cutadapt v5.2 with `--discard-untrimmed`; DADA2 v1.28 in R 4.4.0; `filterAndTrim(maxN = 0, maxEE = c(2, 2), truncQ = 2, rm.phix = TRUE)` with `truncLen` set per batch; `mergePairs(maxMismatch = 0)` with `minOverlap` set per batch; `removeBimeraDenovo(method = "consensus")`; `drop_rare_asvs(at_least_n = 2)`; SILVA v138.2, `assignTaxonomy(minBoot = 80)` + `addSpecies()`; chloroplast and mitochondria removed; genus as taxonomic unit |
+| 2026-10-03 | Changes to the predoc pipeline | (1) one batch per BioProject instead of 7 region groups; (2) reads oriented before DADA2 instead of reverse-complementing ASVs of Groups E and F before taxonomy; (3) `learnErrors(nbases = 3e8)` in every batch, not only Group_F; (4) `pool = "pseudo"` in every batch, as stated in the predoc (the Group_F rerun had used `pool = FALSE`); (5) error model fitted with enforced monotonicity for NovaSeq batches (B06, B10), whose binned quality scores break the default fit |
+| 2026-10-03 | Error model unit: sequencing run when known (B05, B10, B11), otherwise BioProject; B06 pooled into one model | SRA did not keep original read names in 7 BioProjects; B06 has only 2–4 runs per flow cell, too few to train a model each |
+| 2026-10-03 | Core definition pending | The predoc defined core genera as prevalence ≥ 70% in ≥ 3 of 7 region groups, which no longer exist. Proposed: same threshold with BioProject as the unit; to be decided with the supervisor |
