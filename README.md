@@ -33,7 +33,9 @@ soybean-phyllosphere-meta-analysis/
 │   ├── 03_cross_selection.R
 │   ├── 04_build_sample_sheet.R
 │   ├── 05_download_reads.sh
-│   └── 06_trim_orient.sh
+│   ├── 05b_check_pairs.sh
+│   ├── 06_trim_orient.sh
+│   └── 07_quality_profiles.R
 ├── results/
 │   ├── 01_verification/
 │   ├── 01b_alignment/
@@ -41,7 +43,8 @@ soybean-phyllosphere-meta-analysis/
 │   ├── 02b_summary/
 │   ├── 03_selection/
 │   ├── 04_sample_sheet/
-│   └── 06_trim/
+│   ├── 06_trim/
+│   └── 07_quality/
 └── logs/
 ```
 
@@ -196,6 +199,14 @@ cutadapt v5.2 is installed in a dedicated virtual environment in `$HOME` (visibl
 module load StdEnv/2023 python/3.11
 python -m venv ~/envs/cutadapt && source ~/envs/cutadapt/bin/activate && pip install cutadapt==5.2
 ```
+
+### 07 — Quality profiles and truncation lengths
+
+```bash
+Rscript scripts/07_quality_profiles.R results/06_trim/trim_manifest.tsv results/07_quality 10 2000
+```
+
+For each batch (and each orientation set of B05), samples 2,000 reads from up to 10 runs and proposes `truncLen` values that (1) do not exceed the 5th percentile of trimmed read length, (2) stop where the smoothed median quality falls below Q25, and (3) keep `truncLen_F + truncLen_R ≥ insert length + 20` so that pairs can merge (insert length from the primer positions on *E. coli* 16S). When (2) and (3) conflict, overlap wins and R1 is extended first; the batch is flagged. Proposals (`quality_summary.tsv`) and plots (`quality_<batch>.png`) are reviewed before copying the values into `config/dada2_params.tsv`.
 
 ## Decision log
 
