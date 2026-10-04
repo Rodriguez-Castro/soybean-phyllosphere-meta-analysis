@@ -35,7 +35,9 @@ soybean-phyllosphere-meta-analysis/
 │   ├── 05_download_reads.sh
 │   ├── 05b_check_pairs.sh
 │   ├── 06_trim_orient.sh
-│   └── 07_quality_profiles.R
+│   ├── 07_quality_profiles.R
+│   ├── 08_dada2_batch.R
+│   └── 08_dada2.sbatch
 ├── results/
 │   ├── 01_verification/
 │   ├── 01b_alignment/
@@ -44,7 +46,8 @@ soybean-phyllosphere-meta-analysis/
 │   ├── 03_selection/
 │   ├── 04_sample_sheet/
 │   ├── 06_trim/
-│   └── 07_quality/
+│   ├── 07_quality/
+│   └── 08_dada2/
 └── logs/
 ```
 
@@ -208,6 +211,19 @@ Rscript scripts/07_quality_profiles.R results/06_trim/trim_manifest.tsv results/
 
 For each batch (and each orientation set of B05), samples 2,000 reads from up to 10 runs and proposes `truncLen` values that (1) do not exceed the 5th percentile of trimmed read length, (2) stop where the smoothed median quality falls below Q25, and (3) never exceed the insert length − 30 (after 3' primer removal, reads of short amplicons end at the amplicon end, so their length varies between taxa and a `truncLen` close to the insert length would silently drop taxa with shorter inserts), and (4) keep `truncLen_F + truncLen_R ≥ insert length + 20` so that pairs can merge (insert length from the primer positions on *E. coli* 16S). When the quality cut and the overlap conflict, overlap wins and R1 is extended first; the batch is flagged. Proposals (`quality_summary.tsv`) and plots (`quality_<batch>.png`) are reviewed before copying the values into `config/dada2_params.tsv`.
 
+### 08 — DADA2 per batch
+
+```bash
+newgrp def-ilafores
+sbatch --array=5 scripts/08_dada2.sbatch   # test with one batch (B06)
+sbatch scripts/08_dada2.sbatch             # all batches, 3 at a time
+squeue -u $USER                            # follow the jobs
+```
+
+Each batch runs as one Slurm array task (8 CPUs, 48 GB, 24 h) with the predoc parameters: `filterAndTrim(maxN = 0, maxEE = c(2, 2), truncQ = 2, rm.phix = TRUE)` with the batch `truncLen`; `learnErrors(nbases = 3e8)` per error group (sequencing run or BioProject, sets A/B of B05 separately; NovaSeq batches with a monotone loess fit); `dada(pool = "pseudo")` per error group; `mergePairs(maxMismatch = 0, minOverlap, trimOverhang = TRUE)`; groups combined, sets A/B summed per run, and `removeBimeraDenovo(method = "consensus")` on the whole batch. Filtered reads go to `~/soy_meta_data/filtered/<batch>/`.
+
+Outputs in `results/08_dada2/<batch>/`: `seqtab_nochim.rds`, `track.tsv` (reads per step and run), `asv_lengths.tsv`, `errors_<group>.pdf` and `summary.txt`.
+
 ## Decision log
 
 | Date | Decision | Reason |
@@ -235,3 +251,5 @@ For each batch (and each orientation set of B05), samples 2,000 reads from up to
 | 2026-10-04 | All scripts refuse to run on the login node | Steps 05 (re-download) and 06 (trimming) were run on `iv12` after a `salloc` allocation expired. Outputs are unaffected, but the lab rule forbids computation there |
 | 2026-10-04 | `truncLen` and `minOverlap` per batch set from step 07 (`config/dada2_params.tsv`) | Rule: min(5th percentile of read length, last position with median Q ≥ 25, insert length − 30), extended only if needed to keep ≥ 20 bp of overlap; `minOverlap = 20`, or 12 when the expected overlap is < 28 bp (B06). B04 uses 150/149 instead of the predoc's 140/140 (reads keep Q ≥ 25 up to their end). B06 (V3–V4, 2×250 NovaSeq, insert ≈ 429 bp) has only ≈ 22 bp of expected overlap: taxa with inserts longer than ≈ 439 bp will not merge, a known limitation of 2×250 reads for V3–V4 |
 | 2026-10-04 | DADA2 v1.34.0 (R 4.4.0) instead of v1.28 stated in the predoc | Version installed on the compute node; to be reported in the methods |
+| 2026-10-04 | DADA2 run as Slurm batch jobs (`sbatch`) instead of interactive `salloc` sessions | The longest step of the pipeline; batch jobs do not depend on the interactive allocation or the SSH connection |
+| 2026-10-04 | `mergePairs(trimOverhang = TRUE)` | With short amplicons (V4, ≈ 253 bp) and long truncation lengths, reads overhang the amplicon ends; overhangs are trimmed so that merged sequences span exactly the amplicon |
