@@ -161,7 +161,16 @@ Includes every selected run verified as bacterial 16S whose previous group is no
 bash scripts/05_download_reads.sh metadata/sample_sheet.tsv <raw_dir> 4
 ```
 
-`fasterq-dump` for every run of the sample sheet, compressed to `<raw_dir>/<run>_1.fastq.gz` / `_2.fastq.gz`. Resumable (`.done` markers); failures listed in `logs/05_download_failed.tsv`.
+`fasterq-dump --split-3` for every run of the sample sheet, compressed to `<raw_dir>/<run>_1.fastq.gz` / `_2.fastq.gz` (reads without mate go to `<run>.fastq.gz` and are not used); runs whose `_1` and `_2` differ in read number are not marked as done. Resumable (`.done` markers); failures listed in `logs/05_download_failed.tsv`.
+
+### 05b — Check read pairing
+
+```bash
+bash scripts/05b_check_pairs.sh metadata/sample_sheet.tsv <raw_dir> --reset
+bash scripts/05_download_reads.sh metadata/sample_sheet.tsv <raw_dir> 4
+```
+
+Counts the reads of `_1` and `_2` for every run (`results/05_download/pair_check.tsv`). With `--reset`, mismatched runs are deleted so that step 05 downloads them again.
 
 ### 06 — Remove primers and orient reads
 
@@ -179,7 +188,14 @@ After this step, in every run file `_1` starts at the forward primer site and `_
 | `R1_reverse` | R1 and R2 swapped |
 | `mixed` (B05) | two cutadapt passes; pairs found in each orientation are written as sets `<run>_A` and `<run>_B`, which get separate error models in DADA2 |
 
-Extra cutadapt options per batch come from `config/dada2_params.tsv` (e.g. `--pair-filter=first` for B07, as in the predoc). `results/06_trim/trim_manifest.tsv` records reads in/out per run.
+Extra cutadapt options per batch come from `config/dada2_params.tsv` (e.g. `--pair-filter=first` for B07, as in the predoc). `results/06_trim/trim_manifest.tsv` records reads in/out per run. Runs with unpaired input files or a failed cutadapt call are not written as successful (`unpaired_input`, `cutadapt_failed`) and are listed at the end of the run.
+
+cutadapt v5.2 is installed in a dedicated virtual environment in `$HOME` (visible from `cv3401`):
+
+```bash
+module load StdEnv/2023 python/3.11
+python -m venv ~/envs/cutadapt && source ~/envs/cutadapt/bin/activate && pip install cutadapt==5.2
+```
 
 ## Decision log
 
@@ -203,3 +219,5 @@ Extra cutadapt options per batch come from `config/dada2_params.tsv` (e.g. `--pa
 | 2026-10-03 | Changes to the predoc pipeline | (1) one batch per BioProject instead of 7 region groups; (2) reads oriented before DADA2 instead of reverse-complementing ASVs of Groups E and F before taxonomy; (3) `learnErrors(nbases = 3e8)` in every batch, not only Group_F; (4) `pool = "pseudo"` in every batch, as stated in the predoc (the Group_F rerun had used `pool = FALSE`); (5) error model fitted with enforced monotonicity for NovaSeq batches (B06, B10), whose binned quality scores break the default fit |
 | 2026-10-03 | Error model unit: sequencing run when known (B05, B10, B11), otherwise BioProject; B06 pooled into one model | SRA did not keep original read names in 7 BioProjects; B06 has only 2–4 runs per flow cell, too few to train a model each |
 | 2026-10-03 | Core definition pending | The predoc defined core genera as prevalence ≥ 70% in ≥ 3 of 7 region groups, which no longer exist. Proposed: same threshold with BioProject as the unit; to be decided with the supervisor |
+| 2026-10-03 | Reads re-downloaded with `fasterq-dump --split-3`; pairing checked before trimming | The first download used `--split-files`, which put unmated reads into `_1`/`_2` and broke the pairing (e.g. SRR10966917: 23,675 vs 21,244 reads). cutadapt stopped at the first mismatch, so B01 and B03 kept only 63–66% of reads. Step 06 now refuses unpaired inputs and records failed cutadapt calls |
+| 2026-10-03 | B06 (PRJNA987554) forward primer set to the 341F variant `CCTAYGGGRBGCASCAG` | With 338F only 7.7% of R1 reads matched; the predoc had trimmed the same runs with this primer (99.6% of pairs kept). 338F and 341F are indistinguishable by alignment position |

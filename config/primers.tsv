@@ -15,3 +15,4 @@ ITS2	GCTGCGTTCTTCATCGATGC	ITS	fungal, used to flag non-bacterial runs
 ITS4	TCCTCCGCTTATTGATATGC	ITS	fungal, used to flag non-bacterial runs
 520F	AGCAGCCGCGGTAAT	16S	V4 forward; observed at read start in PRJNA601979 (confirm with paper)
 799R	CMGGGTATCTAATCCKGTT	16S	V4 reverse (reverse complement of 799F); observed in PRJNA601979
+341Fv	CCTAYGGGRBGCASCAG	16S	V3 forward, 341F variant used in PRJNA987554 (predoc: 99.6% of pairs trimmed)

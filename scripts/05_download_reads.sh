@@ -4,8 +4,9 @@
 # Usage:
 #   bash scripts/05_download_reads.sh <sample_sheet.tsv> <raw_dir> [threads]
 #
-# Writes <raw_dir>/<run>_1.fastq.gz and <run>_2.fastq.gz (or <run>.fastq.gz if single-end)
-# and a <run>.done marker. Resumable: runs with a .done marker are skipped.
+# Writes <raw_dir>/<run>_1.fastq.gz and <run>_2.fastq.gz and a <run>.done marker.
+# --split-3 keeps R1 and R2 properly paired: reads without mate go to <run>.fastq.gz (not used).
+# (--split-files must not be used: unmated reads would shift the pairing between _1 and _2.) Resumable: runs with a .done marker are skipped.
 # Failed runs are listed in logs/05_download_failed.tsv.
 # Requires: sra-toolkit (fasterq-dump), run from the repository root.
 
@@ -26,10 +27,19 @@ tail -n +2 "$SHEET" | cut -f1 | while read -r run; do
   echo "[$i/$total] $run"
   rm -f "$RAW/${run}"*.fastq "$RAW/${run}"*.fastq.gz
 
-  if fasterq-dump --split-files --skip-technical --threads "$THREADS" --temp "$RAW/tmp" \
+  if fasterq-dump --split-3 --skip-technical --threads "$THREADS" --temp "$RAW/tmp" \
        -O "$RAW" "$run" < /dev/null > /dev/null 2>> logs/05_download_errors.log \
      && ls "$RAW/${run}"*.fastq > /dev/null 2>&1; then
-    $GZ "$RAW/${run}"*.fastq && touch "$RAW/${run}.done"
+    $GZ "$RAW/${run}"*.fastq
+    if [[ -f "$RAW/${run}_2.fastq.gz" ]]; then
+      n1=$(( $(zcat "$RAW/${run}_1.fastq.gz" | wc -l) / 4 ))
+      n2=$(( $(zcat "$RAW/${run}_2.fastq.gz" | wc -l) / 4 ))
+      if [[ "$n1" != "$n2" ]]; then
+        echo -e "$run\tunpaired_${n1}_${n2}" >> logs/05_download_failed.tsv
+        echo "  R1/R2 read numbers differ ($n1 vs $n2)"; continue
+      fi
+    fi
+    touch "$RAW/${run}.done"
   else
     echo -e "$run\tdownload_failed" >> logs/05_download_failed.tsv
     echo "  download failed"
