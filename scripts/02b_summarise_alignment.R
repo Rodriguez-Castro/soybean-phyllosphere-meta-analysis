@@ -16,6 +16,12 @@
 # Outputs in <outdir>: run_alignment_summary.tsv, bioproject_alignment_summary.tsv, bacterial_runs.tsv
 # Base R only.
 
+# refuse to run on the login node (lab rule: no computation on iv12; use salloc --partition bio)
+if (grepl("^iv", Sys.info()[["nodename"]])) {
+  stop("you are on the login node (", Sys.info()[["nodename"]], "). Request a compute node first:\n",
+       "  salloc --time=24:00:00 --cpus-per-task=4 --mem=8G --partition bio", call. = FALSE)
+}
+
 args <- commandArgs(trailingOnly = TRUE)
 aln_file     <- if (length(args) >= 1) args[1] else "results/01b_alignment/alignment.tsv"
 runlist_file <- if (length(args) >= 2) args[2] else "metadata/run_list.tsv"

@@ -9,6 +9,13 @@
 
 set -uo pipefail
 
+# refuse to run on the login node (lab rule: no computation on iv12; use salloc --partition bio)
+if [[ "$(hostname -s)" == iv* ]]; then
+  echo "ERROR: you are on the login node ($(hostname -s)). Request a compute node first:" >&2
+  echo "  salloc --time=24:00:00 --cpus-per-task=4 --mem=8G --partition bio" >&2
+  exit 1
+fi
+
 SHEET=${1:?sample sheet required}
 RAW=${2:?raw reads directory required}
 RESET=${3:-}

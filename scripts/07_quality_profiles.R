@@ -15,6 +15,12 @@
 # Outputs in <outdir>: quality_<batch>.png, quality_summary.tsv (proposals to review before
 # copying them into config/dada2_params.tsv). Base R only.
 
+# refuse to run on the login node (lab rule: no computation on iv12; use salloc --partition bio)
+if (grepl("^iv", Sys.info()[["nodename"]])) {
+  stop("you are on the login node (", Sys.info()[["nodename"]], "). Request a compute node first:\n",
+       "  salloc --time=24:00:00 --cpus-per-task=4 --mem=8G --partition bio", call. = FALSE)
+}
+
 args <- commandArgs(trailingOnly = TRUE)
 manifest_file <- if (length(args) >= 1) args[1] else "results/06_trim/trim_manifest.tsv"
 outdir        <- if (length(args) >= 2) args[2] else "results/07_quality"

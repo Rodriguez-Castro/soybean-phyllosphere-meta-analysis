@@ -19,6 +19,12 @@
 #   results/04_sample_sheet/batch_summary.tsv
 # Base R only.
 
+# refuse to run on the login node (lab rule: no computation on iv12; use salloc --partition bio)
+if (grepl("^iv", Sys.info()[["nodename"]])) {
+  stop("you are on the login node (", Sys.info()[["nodename"]], "). Request a compute node first:\n",
+       "  salloc --time=24:00:00 --cpus-per-task=4 --mem=8G --partition bio", call. = FALSE)
+}
+
 sel_file  <- "results/03_selection/selection_check.tsv"
 aln_file  <- "results/02b_summary/run_alignment_summary.tsv"
 runs_file <- "metadata/run_list.tsv"

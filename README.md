@@ -50,7 +50,7 @@ soybean-phyllosphere-meta-analysis/
 
 ## Requirements (hpc-bio, Compute Canada software stack)
 
-No computation is allowed on the login node (`iv12`). All steps run on the compute node `cv3401`, requested with `salloc` from inside a `tmux` session:
+No computation is allowed on the login node (`iv12`); every script stops with an error if launched there. If a `salloc` allocation expires, the shell inside tmux silently returns to `iv12`: check the prompt before launching anything. All steps run on the compute node `cv3401`, requested with `salloc` from inside a `tmux` session:
 
 ```bash
 ssh rodl4348@hpc-bio.ccs.usherbrooke.ca
@@ -232,3 +232,4 @@ For each batch (and each orientation set of B05), samples 2,000 reads from up to
 | 2026-10-03 | Core definition pending | The predoc defined core genera as prevalence ≥ 70% in ≥ 3 of 7 region groups, which no longer exist. Proposed: same threshold with BioProject as the unit; to be decided with the supervisor |
 | 2026-10-03 | Reads re-downloaded with `fasterq-dump --split-3`; pairing checked before trimming | The first download used `--split-files`, which put unmated reads into `_1`/`_2` and broke the pairing (e.g. SRR10966917: 23,675 vs 21,244 reads). cutadapt stopped at the first mismatch, so B01 and B03 kept only 63–66% of reads. Step 06 now refuses unpaired inputs and records failed cutadapt calls |
 | 2026-10-03 | B06 (PRJNA987554) forward primer set to the 341F variant `CCTAYGGGRBGCASCAG` | With 338F only 7.7% of R1 reads matched; the predoc had trimmed the same runs with this primer (99.6% of pairs kept). 338F and 341F are indistinguishable by alignment position |
+| 2026-10-04 | All scripts refuse to run on the login node | Steps 05 (re-download) and 06 (trimming) were run on `iv12` after a `salloc` allocation expired. Outputs are unaffected, but the lab rule forbids computation there |

@@ -11,6 +11,12 @@
 #
 # Base R only, no packages required.
 
+# refuse to run on the login node (lab rule: no computation on iv12; use salloc --partition bio)
+if (grepl("^iv", Sys.info()[["nodename"]])) {
+  stop("you are on the login node (", Sys.info()[["nodename"]], "). Request a compute node first:\n",
+       "  salloc --time=24:00:00 --cpus-per-task=4 --mem=8G --partition bio", call. = FALSE)
+}
+
 args <- commandArgs(trailingOnly = TRUE)
 counts_file  <- if (length(args) >= 1) args[1] else "results/01_verification/primer_counts.tsv"
 runlist_file <- if (length(args) >= 2) args[2] else "metadata/run_list.tsv"

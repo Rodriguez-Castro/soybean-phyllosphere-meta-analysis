@@ -12,6 +12,11 @@ import glob
 import os
 import sys
 
+import socket
+if socket.gethostname().startswith("iv"):
+    sys.exit("ERROR: you are on the login node. Request a compute node first:\n"
+             "  salloc --time=24:00:00 --cpus-per-task=4 --mem=8G --partition bio")
+
 # output column -> possible column names in RunInfo / SraRunTable files
 COLUMNS = {
     "run": ["Run"],
