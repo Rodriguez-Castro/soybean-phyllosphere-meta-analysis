@@ -8,6 +8,9 @@
 # <runs_per_batch> runs and computes, for R1 and R2: median quality per position and read length
 # distribution. It then proposes truncLen values that
 #   (1) do not exceed the 5th percentile of read length (filterAndTrim drops shorter reads),
+#   (1b) do not exceed insert length - LEN_MARGIN: after 3' primer removal, reads of short
+#       amplicons end at the amplicon end, so their length varies between taxa; a truncLen close
+#       to the insert length would silently drop taxa with shorter inserts,
 #   (2) stop where the median quality falls below Q_MIN, and
 #   (3) keep enough overlap to merge: truncLen_F + truncLen_R >= insert length + MIN_OVERLAP + MARGIN.
 # If (2) and (3) conflict, overlap wins (the quality cut is relaxed) and the batch is flagged.
@@ -31,6 +34,7 @@ dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 Q_MIN       <- 25   # median quality threshold for truncation
 MIN_OVERLAP <- 12   # minimum overlap used in the predoc
 MARGIN      <- 8    # extra overlap for length variation between taxa
+LEN_MARGIN  <- 30   # truncLen never above insert length - 30 (insert length varies between taxa)
 set.seed(1)
 
 # Insert length between primers on E. coli 16S (bases between forward primer end and
@@ -83,15 +87,17 @@ for (key in sort(unique(man$key))) {
   L  <- insert_len(pr$fwd_primer, pr$rev_primer)
   p1 <- profile(d$r1); p2 <- profile(d$r2)
 
-  tF <- min(floor(p1$p5), last_good(p1$med, Q_MIN))
-  tR <- min(floor(p2$p5), last_good(p2$med, Q_MIN))
+  maxF <- min(floor(p1$p5), L - LEN_MARGIN)    # hard limits: read length and insert length
+  maxR <- min(floor(p2$p5), L - LEN_MARGIN)
+  tF <- min(maxF, last_good(p1$med, Q_MIN))
+  tR <- min(maxR, last_good(p2$med, Q_MIN))
   need <- L + MIN_OVERLAP + MARGIN
   flag <- ""
   if (tF + tR < need) {      # relax the quality cut, never beyond the read length limit
     extra <- need - (tF + tR)
     # R1 first: its quality is usually better than R2's
-    addF <- min(extra, floor(p1$p5) - tF); tF <- tF + addF; extra <- extra - addF
-    addR <- min(extra, floor(p2$p5) - tR); tR <- tR + addR; extra <- extra - addR
+    addF <- min(extra, maxF - tF); tF <- tF + addF; extra <- extra - addF
+    addR <- min(extra, maxR - tR); tR <- tR + addR; extra <- extra - addR
     flag <- if (extra > 0) "CANNOT_MERGE: reads too short for this insert"
             else "quality cut relaxed to keep overlap"
   }

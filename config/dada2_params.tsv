@@ -1,11 +1,11 @@
 batch	bioproject	cutadapt_extra	error_unit	error_model	truncLen_F	truncLen_R	minOverlap	note
-B01	PRJNA603147		bioproject	standard	NA	NA	NA	sequencing run unknown (original read names not kept by SRA)
-B03	PRJNA603207		bioproject	standard	NA	NA	NA	sequencing run unknown
-B04	PRJNA544311		bioproject	standard	NA	NA	NA	sequencing run unknown; primers removed
-B05	PRJNA1092852		seq_run	standard	NA	NA	NA	4 sequencing runs; mixed orientation within runs: the two orientations (sets A and B) get separate error models
-B06	PRJNA987554		bioproject	novaseq	NA	NA	NA	4 NovaSeq flow cells with 2-4 runs each: pooled into one error model
-B07	PRJNA601979	--pair-filter=first	bioproject	standard	NA	NA	NA	--pair-filter=first as in the predoc (Group_C)
-B08	PRJNA862265		bioproject	standard	NA	NA	NA	sequencing run unknown
-B09	PRJNA662376		bioproject	standard	NA	NA	NA	R1 starts with the reverse primer: R1/R2 swapped before trimming
-B10	PRJNA1280517		seq_run	novaseq	NA	NA	NA	2 NovaSeq flow cells; primers removed; variable trimming by the authors
-B11	PRJNA390118		seq_run	standard	NA	NA	NA	1 sequencing run; primers removed; R1/R2 swapped in R1_reverse runs
+B01	PRJNA603147		bioproject	standard	223	210	20	sequencing run unknown (original read names not kept by SRA)
+B03	PRJNA603207		bioproject	standard	223	223	20	sequencing run unknown
+B04	PRJNA544311		bioproject	standard	150	149	20	sequencing run unknown; primers removed
+B05	PRJNA1092852		seq_run	standard	A:274;B:234	A:231;B:275	20	4 sequencing runs; mixed orientation within runs: the two orientations (sets A and B) get separate error models
+B06	PRJNA987554		bioproject	novaseq	227	224	12	4 NovaSeq flow cells with 2-4 runs each: pooled into one error model
+B07	PRJNA601979	--pair-filter=first	bioproject	standard	216	216	20	--pair-filter=first as in the predoc (Group_C)
+B08	PRJNA862265		bioproject	standard	221	220	20	sequencing run unknown
+B09	PRJNA662376		bioproject	standard	212	264	20	R1 starts with the reverse primer: R1/R2 swapped before trimming
+B10	PRJNA1280517		seq_run	novaseq	223	224	20	2 NovaSeq flow cells; primers removed; variable trimming by the authors
+B11	PRJNA390118		seq_run	standard	223	223	20	1 sequencing run; primers removed; R1/R2 swapped in R1_reverse runs
